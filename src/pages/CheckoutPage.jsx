@@ -4,6 +4,10 @@ import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useCart } from '../contexts/CartContext';
 import usePageTitle from '../hooks/usePageTitle';
+import laptopApi from '../api/laptopApi';
+import orderApi from '../api/orderApi';
+import cartApi from '../api/cartApi';
+import { getErrorMessage } from '../api/axiosClient';
 import { formatPrice, getSellingPrice } from '../utils/format';
 import { handleImageError } from '../utils/image';
 import LoadingSpinner from '../components/common/LoadingSpinner';
@@ -67,6 +71,9 @@ export default function CheckoutPage() {
   const handleChange = (e) => setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
   const handleBlur = (e) => setTouched((t) => ({ ...t, [e.target.name]: true }));
 
+  /**
+   * C4: Quy trình thanh toán 5 bước
+   */
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSubmitted(true);
@@ -74,7 +81,119 @@ export default function CheckoutPage() {
 
     setSubmitting(true);
     setError(null);
-    // Logic 5 bước sẽ được kết nối ở commit tiếp theo
+
+    try {
+      // =========================================================================
+      // BƯỚC 1: Promise.all getById mọi laptop trong giỏ → kiểm tra tồn kho mới nhất
+      // =========================================================================
+      const latestLaptops = await Promise.all(
+        items.map(async (item) => {
+          const res = await laptopApi.getById(item.laptopId);
+          return res.data ?? res;
+        })
+      );
+
+      // Thiếu hàng báo "<tên laptop> chỉ còn <stock> sản phẩm"
+      const insufficientItems = [];
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        const latest = latestLaptops[i];
+        if (item.quantity > latest.stock) {
+          insufficientItems.push({
+            name: latest.name,
+            stock: latest.stock,
+            quantity: item.quantity,
+          });
+        }
+      }
+
+      if (insufficientItems.length > 0) {
+        const message = insufficientItems
+          .map((item) => `"${item.name}" chỉ còn ${item.stock} sản phẩm`)
+          .join(', ');
+        setError(`${message}, vui lòng cập nhật lại giỏ hàng.`);
+        setSubmitting(false);
+        return;
+      }
+
+      // =========================================================================
+      // BƯỚC 2: POST /orders (status: pending, createdAt, total tính lại)
+      // =========================================================================
+      const recalculatedTotal = items.reduce(
+        (sum, item) => sum + getSellingPrice(item.laptop) * item.quantity,
+        0
+      );
+
+      const orderPayload = {
+        userId: user.id,
+        customerName: form.fullName.trim(),
+        fullName: form.fullName.trim(),
+        phone: form.phone.trim(),
+        customerPhone: form.phone.trim(),
+        address: form.address.trim(),
+        customerAddress: form.address.trim(),
+        note: form.note.trim(),
+        items: items.map((item) => ({
+          id: item.id,
+          laptopId: item.laptopId,
+          quantity: item.quantity,
+          price: getSellingPrice(item.laptop),
+          laptop: {
+            id: item.laptop.id,
+            name: item.laptop.name,
+            image: item.laptop.image,
+            price: item.laptop.price,
+            salePrice: item.laptop.salePrice,
+            stock: item.laptop.stock,
+          },
+        })),
+        total: recalculatedTotal,
+        status: 'pending',
+        createdAt: new Date().toISOString(),
+      };
+
+      const createdOrder = await orderApi.create(orderPayload);
+
+      // =========================================================================
+      // BƯỚC 3: Promise.allSettled: PATCH stock/sold + DELETE cartItems; có lỗi → console.warn
+      // =========================================================================
+      const stockUpdates = items.map((item, index) => {
+        const latest = latestLaptops[index];
+        const newStock = Math.max(0, latest.stock - item.quantity);
+        const newSold = (latest.sold || 0) + item.quantity;
+        return laptopApi.patch(item.laptopId, { stock: newStock, sold: newSold });
+      });
+
+      const cartDeletions = items.map((item) => cartApi.remove(item.id));
+
+      const settledResults = await Promise.allSettled([
+        ...stockUpdates,
+        ...cartDeletions,
+      ]);
+
+      settledResults.forEach((result, idx) => {
+        if (result.status === 'rejected') {
+          console.warn(`[Checkout] Thao tác thứ ${idx + 1} gặp lỗi:`, result.reason);
+        }
+      });
+
+      // =========================================================================
+      // BƯỚC 4: Làm rỗng giỏ trong local state
+      // =========================================================================
+      clearLocal();
+
+      // =========================================================================
+      // BƯỚC 5: navigate('/orders', { state: { message: 'Đặt hàng thành công! Mã đơn #<id>' } })
+      // =========================================================================
+      navigate('/orders', {
+        state: {
+          message: `Đặt hàng thành công! Mã đơn #${createdOrder.id}`,
+        },
+      });
+    } catch (err) {
+      setError(getErrorMessage(err));
+      setSubmitting(false);
+    }
   };
 
   return (
