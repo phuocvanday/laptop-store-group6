@@ -16,7 +16,7 @@ import ConfirmModal from '../components/common/ConfirmModal';
 export default function CartPage() {
   usePageTitle('Giỏ hàng');
   const navigate = useNavigate();
-  const { items, totalPrice, loading, error, updateQuantity, reload } = useCart();
+  const { items, totalPrice, loading, error, updateQuantity, removeItem, reload } = useCart();
   const { showToast } = useToast();
   const [pendingId, setPendingId] = useState(null);
   const [itemToRemove, setItemToRemove] = useState(null);
@@ -33,6 +33,18 @@ export default function CartPage() {
       showToast(getErrorMessage(err), 'danger');
     } finally {
       setPendingId(null);
+    }
+  };
+
+  /** H4. Optimistic: dòng biến mất ngay, lỗi thì CartContext khôi phục */
+  const confirmRemove = async () => {
+    const item = itemToRemove;
+    setItemToRemove(null);
+    try {
+      await removeItem(item);
+      showToast(`Đã xóa "${item.laptop.name}" khỏi giỏ hàng`, 'info');
+    } catch {
+      showToast('Xóa thất bại, đã khôi phục', 'danger');
     }
   };
 
@@ -80,7 +92,7 @@ export default function CartPage() {
           </thead>
           <tbody>
             {items.map((item) => {
-              const price = getSellingPrice(item.laptop);
+              const price = getSellingPrice(item.laptop); // BR-03
               const busy = pendingId === item.id;
               return (
                 <tr key={item.id}>
@@ -124,7 +136,11 @@ export default function CartPage() {
                     </ButtonGroup>
                   </td>
                   <td className="text-end fw-semibold text-nowrap">{formatPrice(price * item.quantity)}</td>
-                  <td className="text-end" />
+                  <td className="text-end">
+                    <Button variant="outline-danger" size="sm" onClick={() => setItemToRemove(item)}>
+                      Xóa
+                    </Button>
+                  </td>
                 </tr>
               );
             })}
@@ -150,7 +166,7 @@ export default function CartPage() {
         title="Xóa khỏi giỏ hàng"
         message={itemToRemove && `Bạn có chắc muốn xóa "${itemToRemove.laptop.name}" khỏi giỏ hàng?`}
         confirmText="Xóa"
-        onConfirm={() => setItemToRemove(null)}
+        onConfirm={confirmRemove}
         onCancel={() => setItemToRemove(null)}
       />
     </>
