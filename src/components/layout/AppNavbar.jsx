@@ -37,7 +37,7 @@ export default function AppNavbar() {
               </NavLink>
             </li>
             <li className="nav-item">
-              <NavLink className="nav-link" to="/catalog">
+              <NavLink className="nav-link" to="/laptops">
                 Sản phẩm
               </NavLink>
             </li>

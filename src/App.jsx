@@ -20,6 +20,7 @@ export default function App() {
       <Route element={<MainLayout />}>
         <Route index element={<HomePage />} />
         <Route path="laptops" element={<LaptopListPage />} />
+        <Route path="catalog" element={<Navigate to="/laptops" replace />} />
         <Route path="laptops/:id" element={<LaptopDetailPage />} />
         <Route path="login" element={<LoginPage />} />
         <Route path="cart" element={<CartPage />} />

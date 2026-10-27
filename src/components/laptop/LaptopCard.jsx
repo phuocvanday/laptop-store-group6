@@ -1,18 +1,19 @@
 import { Link } from 'react-router-dom';
-import { formatPrice, getFinalPrice } from '../../utils/format';
+import { calculateDiscount, formatPrice, getFinalPrice } from '../../utils/format';
 import Badge from '../common/Badge';
 
 export default function LaptopCard({ laptop, onAddToCart }) {
   if (!laptop) return null;
 
-  const finalPrice = getFinalPrice(laptop.price, laptop.discount);
-  const hasDiscount = laptop.discount && laptop.discount > 0;
+  const finalPrice = getFinalPrice(laptop);
+  const discount = calculateDiscount(laptop.price, laptop.salePrice);
+  const hasDiscount = discount > 0;
 
   return (
     <div className="card h-100 shadow-sm border-0 position-relative">
       {hasDiscount && (
         <span className="position-absolute top-0 start-0 m-2">
-          <Badge variant="danger">-{laptop.discount}%</Badge>
+          <Badge variant="danger">-{discount}%</Badge>
         </span>
       )}
 
