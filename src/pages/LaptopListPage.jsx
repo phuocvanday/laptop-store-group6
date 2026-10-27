@@ -73,8 +73,10 @@ export default function LaptopListPage() {
           catalogApi.getCategories(controller.signal),
         ]);
         if (!controller.signal.aborted) {
-          setBrands(bRes || []);
-          setCategories(cRes || []);
+          const rawBrands = bRes?.data ?? bRes;
+          const rawCategories = cRes?.data ?? cRes;
+          setBrands(Array.isArray(rawBrands) ? rawBrands : []);
+          setCategories(Array.isArray(rawCategories) ? rawCategories : []);
         }
       } catch (err) {
         if (!isCancel(err) && !controller.signal.aborted) {
