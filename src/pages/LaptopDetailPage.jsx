@@ -23,6 +23,7 @@ import NotFoundPage from './NotFoundPage';
 import LaptopCard from '../components/laptop/LaptopCard';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import EmptyState from '../components/common/EmptyState';
+import ReviewList from '../components/laptop/ReviewList';
 
 export default function LaptopDetailPage() {
   const { id } = useParams();
@@ -148,6 +149,11 @@ export default function LaptopDetailPage() {
   const handleAddToCart = () => {
     if (!laptop || laptop.stock <= 0) return;
     showToast(`Đã thêm ${quantity} sản phẩm "${laptop.name}" vào giỏ hàng!`, 'success');
+  };
+
+  // Thêm đánh giá mới trực tiếp vào state mà không cần reload trang (G2, TECH-03)
+  const handleReviewAdded = (newReview) => {
+    setReviews((prev) => [newReview, ...prev]);
   };
 
   const finalPrice = laptop ? getFinalPrice(laptop) : 0;
@@ -372,45 +378,12 @@ export default function LaptopDetailPage() {
 
               {/* Tab 2: Đánh giá */}
               <Tab eventKey="reviews" title={`Đánh giá (${reviews.length})`}>
-                {/* Lỗi Bước 2: Chỉ cảnh báo khu vực đánh giá */}
-                {reviewError && (
-                  <Alert variant="warning" className="my-2">
-                    <i className="bi bi-exclamation-triangle me-2"></i>
-                    {reviewError}
-                  </Alert>
-                )}
-
-                {!reviewError && reviews.length === 0 && (
-                  <EmptyState
-                    title="Chưa có đánh giá nào"
-                    message="Sản phẩm này chưa có đánh giá. Hãy là người đầu tiên trải nghiệm và chia sẻ nhận xét nhé!"
-                  />
-                )}
-
-                {!reviewError && reviews.length > 0 && (
-                  <div className="d-flex flex-column gap-3">
-                    {reviews.map((r) => (
-                      <Card key={r.id} className="border-0 bg-light p-3">
-                        <div className="d-flex justify-content-between align-items-center mb-2">
-                          <div className="d-flex align-items-center gap-2">
-                            <i className="bi bi-person-circle fs-5 text-secondary"></i>
-                            <strong>{r.userName || r.user?.fullName || 'Khách hàng'}</strong>
-                          </div>
-                          <span className="text-muted small">{formatDate(r.createdAt)}</span>
-                        </div>
-                        <div className="text-warning mb-2">
-                          {Array.from({ length: 5 }, (_, i) => (
-                            <i
-                              key={i}
-                              className={`bi bi-star${i < r.rating ? '-fill' : ''} me-1`}
-                            ></i>
-                          ))}
-                        </div>
-                        <p className="mb-0 text-secondary">{r.comment}</p>
-                      </Card>
-                    ))}
-                  </div>
-                )}
+                <ReviewList
+                  reviews={reviews}
+                  reviewError={reviewError}
+                  laptopId={laptop.id}
+                  onReviewAdded={handleReviewAdded}
+                />
               </Tab>
             </Tabs>
           </Card>
