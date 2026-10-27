@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Alert, Badge, Button, Card, Col, Image, Row, Table } from 'react-bootstrap';
+import { Badge, Button, Card, Col, Image, Row, Table } from 'react-bootstrap';
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import usePageTitle from '../hooks/usePageTitle';
 import orderApi from '../api/orderApi';
+import laptopApi from '../api/laptopApi';
 import { getErrorMessage, isCancel } from '../api/axiosClient';
 import { formatDate, formatPrice } from '../utils/format';
 import { handleImageError } from '../utils/image';
@@ -12,6 +13,7 @@ import { getOrderStatusInfo } from '../utils/orderStatus';
 import EmptyState from '../components/common/EmptyState';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import ErrorAlert from '../components/common/ErrorAlert';
+import ConfirmModal from '../components/common/ConfirmModal';
 
 export default function OrderListPage() {
   usePageTitle('Đơn hàng của tôi');
@@ -23,6 +25,10 @@ export default function OrderListPage() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  // Đơn hàng đang được chọn để xác nhận hủy
+  const [orderToCancel, setOrderToCancel] = useState(null);
+  const [cancellingId, setCancellingId] = useState(null);
 
   // Đọc location.state.message → Toast, rồi xoá state (F5 không hiện lại)
   useEffect(() => {
@@ -55,6 +61,44 @@ export default function OrderListPage() {
     loadOrders(controller.signal);
     return () => controller.abort();
   }, [loadOrders]);
+
+  /**
+   * BR-05: Đơn pending có nút "Hủy đơn" → ConfirmModal →
+   * PATCH status: 'cancelled' và cộng lại stock (chạy song song)
+   */
+  const handleConfirmCancel = async () => {
+    if (!orderToCancel) return;
+    const target = orderToCancel;
+    setCancellingId(target.id);
+    try {
+      const restockPromises = (target.items || []).map(async (item) => {
+        try {
+          const res = await laptopApi.getById(item.laptopId);
+          const laptop = res.data ?? res;
+          const currentStock = typeof laptop.stock === 'number' ? laptop.stock : 0;
+          return laptopApi.patch(item.laptopId, { stock: currentStock + item.quantity });
+        } catch (err) {
+          console.warn(`[CancelOrder] Không thể hoàn kho laptop #${item.laptopId}:`, err);
+        }
+      });
+
+      await Promise.all([
+        orderApi.updateStatus(target.id, 'cancelled'),
+        ...restockPromises,
+      ]);
+
+      // Cập nhật trạng thái đơn trong danh sách cục bộ
+      setOrders((list) =>
+        list.map((o) => (o.id === target.id ? { ...o, status: 'cancelled' } : o))
+      );
+      showToast(`Đã hủy đơn hàng #${target.id} thành công`, 'success');
+      setOrderToCancel(null);
+    } catch (err) {
+      showToast(getErrorMessage(err), 'danger');
+    } finally {
+      setCancellingId(null);
+    }
+  };
 
   // Chưa đăng nhập → chuyển về /login
   if (!user) {
@@ -96,6 +140,8 @@ export default function OrderListPage() {
           const customerName = order.fullName || order.customerName || user.fullName;
           const customerPhone = order.phone || order.customerPhone || 'Chưa cập nhật';
           const customerAddress = order.address || order.customerAddress || 'Chưa cập nhật';
+          const isPending = order.status === 'pending';
+          const isCancelling = cancellingId === order.id;
 
           return (
             <Card key={order.id} className="shadow-sm border-0 overflow-hidden">
@@ -191,7 +237,16 @@ export default function OrderListPage() {
 
               <Card.Footer className="bg-white py-3 px-4 d-flex flex-wrap justify-content-between align-items-center gap-3">
                 <div>
-                  {/* Nút hủy đơn sẽ được kết nối ở commit tiếp theo */}
+                  {isPending && (
+                    <Button
+                      variant="outline-danger"
+                      size="sm"
+                      disabled={isCancelling}
+                      onClick={() => setOrderToCancel(order)}
+                    >
+                      Hủy đơn
+                    </Button>
+                  )}
                 </div>
                 <div className="d-flex align-items-center gap-2">
                   <span className="text-muted">Tổng cộng:</span>
@@ -202,6 +257,22 @@ export default function OrderListPage() {
           );
         })}
       </div>
+
+      {/* Modal xác nhận hủy đơn (TECH-05) */}
+      <ConfirmModal
+        show={Boolean(orderToCancel)}
+        title="Xác nhận hủy đơn hàng"
+        message={
+          orderToCancel &&
+          `Bạn có chắc chắn muốn hủy đơn hàng #${orderToCancel.id}? Các sản phẩm trong đơn sẽ được hoàn lại số lượng tồn kho.`
+        }
+        confirmText="Hủy đơn hàng"
+        cancelText="Đóng"
+        variant="danger"
+        loading={Boolean(cancellingId)}
+        onConfirm={handleConfirmCancel}
+        onCancel={() => setOrderToCancel(null)}
+      />
     </div>
   );
 }
