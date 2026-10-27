@@ -1,5 +1,6 @@
 import { Alert, Button } from 'react-bootstrap';
 
+/** Thông báo lỗi dùng chung, có nút "Thử lại" (gọi refetch của useAxios) */
 export default function ErrorAlert({ message, onRetry, title = 'Đã xảy ra lỗi' }) {
   return (
     <Alert variant="danger" className="my-3">
