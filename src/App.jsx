@@ -26,6 +26,7 @@ export default function App() {
         <Route path="cart" element={<CartPage />} />
         <Route path="checkout" element={<CheckoutPage />} />
         <Route path="orders" element={<OrderListPage />} />
+        <Route path="my-orders" element={<Navigate to="/orders" replace />} />
         <Route path="*" element={<NotFoundPage />} />
       </Route>
 

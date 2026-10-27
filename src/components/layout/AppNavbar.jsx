@@ -1,4 +1,5 @@
 import { Link, NavLink, useNavigate } from 'react-router-dom';
+import { Dropdown } from 'react-bootstrap';
 import { useAuth } from '../../contexts/AuthContext';
 import SearchSuggest from './SearchSuggest';
 
@@ -53,40 +54,32 @@ export default function AppNavbar() {
             </Link>
 
             {user ? (
-              <div className="dropdown">
-                <button
-                  className="btn btn-primary btn-sm dropdown-toggle"
-                  type="button"
+              <Dropdown align="end">
+                <Dropdown.Toggle
+                  variant="primary"
+                  size="sm"
                   id="userDropdown"
-                  data-bs-toggle="dropdown"
-                  aria-expanded="false"
+                  className="d-flex align-items-center"
                 >
                   <i className="bi bi-person-circle me-1"></i>
                   {user.fullName || user.username || 'Tài khoản'}
-                </button>
-                <ul className="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                </Dropdown.Toggle>
+
+                <Dropdown.Menu>
                   {user.role === 'admin' && (
-                    <li>
-                      <Link className="dropdown-item" to="/admin/laptops">
-                        Quản trị hệ thống
-                      </Link>
-                    </li>
+                    <Dropdown.Item as={Link} to="/admin/laptops">
+                      Quản trị hệ thống
+                    </Dropdown.Item>
                   )}
-                  <li>
-                    <Link className="dropdown-item" to="/my-orders">
-                      Đơn hàng của tôi
-                    </Link>
-                  </li>
-                  <li>
-                    <hr className="dropdown-divider" />
-                  </li>
-                  <li>
-                    <button className="dropdown-item text-danger" onClick={handleLogout}>
-                      Đăng xuất
-                    </button>
-                  </li>
-                </ul>
-              </div>
+                  <Dropdown.Item as={Link} to="/orders">
+                    Đơn hàng của tôi
+                  </Dropdown.Item>
+                  <Dropdown.Divider />
+                  <Dropdown.Item as="button" className="text-danger" onClick={handleLogout}>
+                    Đăng xuất
+                  </Dropdown.Item>
+                </Dropdown.Menu>
+              </Dropdown>
             ) : (
               <Link to="/login" className="btn btn-outline-primary btn-sm">
                 Đăng nhập
