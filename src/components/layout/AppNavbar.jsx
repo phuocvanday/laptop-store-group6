@@ -1,10 +1,12 @@
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { Dropdown } from 'react-bootstrap';
 import { useAuth } from '../../contexts/AuthContext';
+import { useCart } from '../../contexts/CartContext';
 import SearchSuggest from './SearchSuggest';
 
 export default function AppNavbar() {
   const { user, logout } = useAuth();
+  const { totalQuantity } = useCart();
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -51,6 +53,11 @@ export default function AppNavbar() {
           <div className="d-flex align-items-center gap-3">
             <Link to="/cart" className="btn btn-outline-light position-relative btn-sm">
               <i className="bi bi-cart"></i> Giỏ hàng
+              {totalQuantity > 0 && (
+                <span className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                  {totalQuantity}
+                </span>
+              )}
             </Link>
 
             {user ? (

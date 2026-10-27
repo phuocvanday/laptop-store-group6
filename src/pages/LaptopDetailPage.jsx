@@ -23,6 +23,7 @@ import NotFoundPage from './NotFoundPage';
 import LaptopCard from '../components/laptop/LaptopCard';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import EmptyState from '../components/common/EmptyState';
+import useAddToCart from '../hooks/useAddToCart';
 import ReviewList from '../components/laptop/ReviewList';
 
 export default function LaptopDetailPage() {
@@ -145,10 +146,12 @@ export default function LaptopDetailPage() {
     return <NotFoundPage />;
   }
 
+  const { add: addToCartAction, adding } = useAddToCart();
+
   // Xử lý thêm vào giỏ hàng
   const handleAddToCart = () => {
     if (!laptop || laptop.stock <= 0) return;
-    showToast(`Đã thêm ${quantity} sản phẩm "${laptop.name}" vào giỏ hàng!`, 'success');
+    addToCartAction(laptop, quantity);
   };
 
   // Thêm đánh giá mới trực tiếp vào state mà không cần reload trang (G2, TECH-03)
@@ -317,10 +320,19 @@ export default function LaptopDetailPage() {
                     variant="primary"
                     size="lg"
                     className="fw-bold px-4"
-                    disabled={laptop.stock === 0}
+                    disabled={adding || laptop.stock === 0}
                     onClick={handleAddToCart}
                   >
-                    <i className="bi bi-cart-plus me-2"></i> Thêm vào giỏ hàng
+                    {adding ? (
+                      <>
+                        <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                        Đang thêm...
+                      </>
+                    ) : (
+                      <>
+                        <i className="bi bi-cart-plus me-2"></i> Thêm vào giỏ hàng
+                      </>
+                    )}
                   </Button>
                 </div>
 
