@@ -1,0 +1,44 @@
+# Người sở hữu mặc định (username GitHub thật của nhóm)
+*                                       @phuocvanday
+
+# A — repo, cấu hình, API lõi, routing, hooks
+/.github/                               @phuocvanday
+/.githooks/                             @phuocvanday
+/package.json                           @phuocvanday
+/src/App.jsx                            @phuocvanday
+/src/api/axiosClient.js                 @phuocvanday
+/src/hooks/                             @phuocvanday
+**/*Auth*                               @phuocvanday
+/src/pages/admin/AdminLaptopPage.jsx    @phuocvanday
+
+# B — catalog
+/src/utils/                             @quyvan21012005
+/src/components/common/                 @quyvan21012005
+/src/components/laptop/                 @quyvan21012005
+/src/api/laptopApi.js                   @quyvan21012005
+/src/api/catalogApi.js                  @quyvan21012005
+**/*Review*                             @quyvan21012005
+**/*Home*                               @quyvan21012005
+**/*LaptopList*                         @quyvan21012005
+**/*LaptopDetail*                       @quyvan21012005
+**/*Navbar*                             @quyvan21012005
+**/*Footer*                             @quyvan21012005
+/README.md                              @quyvan21012005
+
+# C — commerce, dữ liệu, kiểm thử
+/db.json                                @nhan2005mk
+/db.backup.json                         @nhan2005mk
+/scripts/                               @nhan2005mk
+**/*Cart*                               @nhan2005mk
+**/*Checkout*                           @nhan2005mk
+**/*Order*                              @nhan2005mk
+**/*Toast*                              @nhan2005mk
+/docs/TEST_REPORT.md                    @nhan2005mk
+
+# Ngoại lệ (để cuối để ghi đè các dòng thư mục ở trên)
+**/*Layout*                             @phuocvanday
+**/*Filter*                             @phuocvanday
+**/*Search*                             @phuocvanday
+**/ProtectedRoute*                      @phuocvanday
+**/ConfirmModal*                        @nhan2005mk
+**/*LaptopForm*                         @nhan2005mk
