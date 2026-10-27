@@ -33,6 +33,8 @@ export const getFinalPrice = (laptop) => {
   return laptop.salePrice ? laptop.salePrice : laptop.price;
 };
 
+export const getSellingPrice = getFinalPrice;
+
 /**
  * Tính phần trăm giảm giá giữa price và salePrice.
  * Ví dụ: price 20tr, salePrice 18tr -> giảm 10%
