@@ -1,5 +1,6 @@
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import SearchSuggest from './SearchSuggest';
 
 export default function AppNavbar() {
   const { user, logout } = useAuth();
@@ -41,6 +42,10 @@ export default function AppNavbar() {
               </NavLink>
             </li>
           </ul>
+
+          <div className="mx-lg-3 flex-grow-1 search-wrapper">
+            <SearchSuggest />
+          </div>
 
           <div className="d-flex align-items-center gap-3">
             <Link to="/cart" className="btn btn-outline-light position-relative btn-sm">
