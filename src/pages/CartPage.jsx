@@ -1,18 +1,40 @@
-import { Button, Card, Image, Table } from 'react-bootstrap';
+import { useState } from 'react';
+import { Alert, Button, ButtonGroup, Card, Image, Table } from 'react-bootstrap';
 import { Link, useNavigate } from 'react-router-dom';
 import { useCart } from '../contexts/CartContext';
+import { useToast } from '../contexts/ToastContext';
+import { getErrorMessage } from '../api/axiosClient';
 import usePageTitle from '../hooks/usePageTitle';
 import { formatPrice, getSellingPrice } from '../utils/format';
 import { handleImageError } from '../utils/image';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import ErrorAlert from '../components/common/ErrorAlert';
 import EmptyState from '../components/common/EmptyState';
+import ConfirmModal from '../components/common/ConfirmModal';
 
 /** G1. Trang giỏ hàng – dữ liệu lưu thật trong /cartItems */
 export default function CartPage() {
   usePageTitle('Giỏ hàng');
   const navigate = useNavigate();
-  const { items, totalPrice, loading, error, reload } = useCart();
+  const { items, totalPrice, loading, error, updateQuantity, reload } = useCart();
+  const { showToast } = useToast();
+  const [pendingId, setPendingId] = useState(null);
+  const [itemToRemove, setItemToRemove] = useState(null);
+
+  const changeQuantity = async (item, quantity) => {
+    if (quantity < 1) {
+      setItemToRemove(item); // BR-02: số lượng về 0 → hỏi xác nhận rồi xoá
+      return;
+    }
+    setPendingId(item.id);
+    try {
+      await updateQuantity(item, quantity);
+    } catch (err) {
+      showToast(getErrorMessage(err), 'danger');
+    } finally {
+      setPendingId(null);
+    }
+  };
 
   if (loading && items.length === 0) return <LoadingSpinner text="Đang tải giỏ hàng..." />;
   if (error) return <ErrorAlert message={error} onRetry={reload} />;
@@ -28,9 +50,22 @@ export default function CartPage() {
     );
   }
 
+  // Tồn kho đã giảm sau khi thêm vào giỏ (người khác mua) → chặn đặt hàng
+  const invalidItems = items.filter((item) => item.quantity > item.laptop.stock);
+
   return (
     <>
       <h3 className="fw-bold mb-3">Giỏ hàng</h3>
+
+      {invalidItems.length > 0 && (
+        <Alert variant="warning">
+          {invalidItems.map((item) => (
+            <div key={item.id}>
+              "{item.laptop.name}" chỉ còn {item.laptop.stock} sản phẩm, vui lòng giảm số lượng.
+            </div>
+          ))}
+        </Alert>
+      )}
 
       <Card className="shadow-sm">
         <Table responsive hover className="mb-0 align-middle">
@@ -46,6 +81,7 @@ export default function CartPage() {
           <tbody>
             {items.map((item) => {
               const price = getSellingPrice(item.laptop);
+              const busy = pendingId === item.id;
               return (
                 <tr key={item.id}>
                   <td style={{ minWidth: 240 }}>
@@ -64,7 +100,29 @@ export default function CartPage() {
                     </div>
                   </td>
                   <td className="text-end text-nowrap">{formatPrice(price)}</td>
-                  <td className="text-center">{item.quantity}</td>
+                  <td className="text-center">
+                    <ButtonGroup size="sm">
+                      <Button
+                        variant="outline-secondary"
+                        disabled={busy}
+                        onClick={() => changeQuantity(item, item.quantity - 1)}
+                        aria-label="Giảm"
+                      >
+                        −
+                      </Button>
+                      <Button variant="light" disabled className="px-3 text-body">
+                        {item.quantity}
+                      </Button>
+                      <Button
+                        variant="outline-secondary"
+                        disabled={busy || item.quantity >= item.laptop.stock}
+                        onClick={() => changeQuantity(item, item.quantity + 1)}
+                        aria-label="Tăng"
+                      >
+                        +
+                      </Button>
+                    </ButtonGroup>
+                  </td>
                   <td className="text-end fw-semibold text-nowrap">{formatPrice(price * item.quantity)}</td>
                   <td className="text-end" />
                 </tr>
@@ -80,12 +138,21 @@ export default function CartPage() {
             <span>
               Tổng cộng: <strong className="fs-4 text-danger">{formatPrice(totalPrice)}</strong>
             </span>
-            <Button size="lg" onClick={() => navigate('/checkout')}>
+            <Button size="lg" disabled={invalidItems.length > 0} onClick={() => navigate('/checkout')}>
               Tiến hành đặt hàng
             </Button>
           </div>
         </Card.Footer>
       </Card>
+
+      <ConfirmModal
+        show={Boolean(itemToRemove)}
+        title="Xóa khỏi giỏ hàng"
+        message={itemToRemove && `Bạn có chắc muốn xóa "${itemToRemove.laptop.name}" khỏi giỏ hàng?`}
+        confirmText="Xóa"
+        onConfirm={() => setItemToRemove(null)}
+        onCancel={() => setItemToRemove(null)}
+      />
     </>
   );
 }
