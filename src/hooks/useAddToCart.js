@@ -19,13 +19,17 @@ export default function useAddToCart() {
 
     const add = async (laptop, quantity = 1) => {
         if (!user) {
+            showToast('Vui lòng đăng nhập để thêm sản phẩm vào giỏ hàng', 'info');
             navigate('/login', { state: { from: location } });
             return;
         }
+        const actualLaptop = laptop?.data ?? laptop;
+        if (!actualLaptop) return;
+
         setAdding(true);
         try {
-            await addToCart(laptop, quantity);
-            showToast(`Đã thêm "${laptop.name}" vào giỏ hàng`);
+            await addToCart(actualLaptop, quantity);
+            showToast(`Đã thêm "${actualLaptop.name}" vào giỏ hàng`);
         } catch (err) {
             showToast(getErrorMessage(err), 'danger'); // ví dụ "... chỉ còn 3 sản phẩm"
         } finally {

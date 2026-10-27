@@ -1,13 +1,26 @@
 import { Link } from 'react-router-dom';
 import { calculateDiscount, formatPrice, getFinalPrice } from '../../utils/format';
 import Badge from '../common/Badge';
+import useAddToCart from '../../hooks/useAddToCart';
 
 export default function LaptopCard({ laptop, onAddToCart }) {
+  const { add, adding } = useAddToCart();
+
   if (!laptop) return null;
 
   const finalPrice = getFinalPrice(laptop);
   const discount = calculateDiscount(laptop.price, laptop.salePrice);
   const hasDiscount = discount > 0;
+
+  const handleAdd = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (onAddToCart) {
+      onAddToCart(laptop);
+    } else {
+      add(laptop, 1);
+    }
+  };
 
   return (
     <div className="card h-100 shadow-sm border-0 position-relative">
@@ -52,9 +65,21 @@ export default function LaptopCard({ laptop, onAddToCart }) {
           <div className="d-grid gap-2">
             <button
               className="btn btn-outline-primary btn-sm"
-              onClick={() => onAddToCart && onAddToCart(laptop)}
+              disabled={adding || (laptop.stock !== undefined && laptop.stock <= 0)}
+              onClick={handleAdd}
             >
-              <i className="bi bi-cart-plus me-1"></i> Thêm vào giỏ
+              {adding ? (
+                <>
+                  <span className="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                  Đang thêm...
+                </>
+              ) : (laptop.stock !== undefined && laptop.stock <= 0) ? (
+                'Hết hàng'
+              ) : (
+                <>
+                  <i className="bi bi-cart-plus me-1"></i> Thêm vào giỏ
+                </>
+              )}
             </button>
           </div>
         </div>
