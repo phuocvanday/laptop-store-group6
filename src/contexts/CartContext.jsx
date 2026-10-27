@@ -7,7 +7,7 @@ import { useAuth } from './AuthContext';
 const CartContext = createContext(null);
 
 /** Bỏ các dòng có laptop đã bị xoá khỏi hệ thống (_expand trả về undefined) */
-const validItems = (items) => items.filter((item) => item.laptop);
+const validItems = (items) => (Array.isArray(items) ? items.filter((item) => item.laptop) : []);
 
 /**
  * G1. Giỏ hàng lưu thật trong json-server (/cartItems).

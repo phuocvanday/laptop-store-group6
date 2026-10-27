@@ -63,7 +63,7 @@ export default function CartPage() {
   }
 
   // Tồn kho đã giảm sau khi thêm vào giỏ (người khác mua) → chặn đặt hàng
-  const invalidItems = items.filter((item) => item.quantity > item.laptop.stock);
+  const invalidItems = (items || []).filter((item) => item.quantity > (item.laptop?.stock ?? 0));
 
   return (
     <>
@@ -73,7 +73,7 @@ export default function CartPage() {
         <Alert variant="warning">
           {invalidItems.map((item) => (
             <div key={item.id}>
-              "{item.laptop.name}" chỉ còn {item.laptop.stock} sản phẩm, vui lòng giảm số lượng.
+              "{item.laptop?.name || 'Sản phẩm'}" chỉ còn {item.laptop?.stock ?? 0} sản phẩm, vui lòng giảm số lượng.
             </div>
           ))}
         </Alert>
