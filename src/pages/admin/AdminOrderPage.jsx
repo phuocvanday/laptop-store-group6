@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Badge, Button, Card, Col, Form, Image, Modal, Nav, Row, Table } from 'react-bootstrap';
+import { Badge, Button, Card, Col, Form, Image, Modal, Nav, Row, Spinner, Table } from 'react-bootstrap';
 import { useSearchParams } from 'react-router-dom';
 import orderApi from '../../api/orderApi';
 import { getErrorMessage, isCancel } from '../../api/axiosClient';
+import { useToast } from '../../contexts/ToastContext';
 import usePageTitle from '../../hooks/usePageTitle';
 import { formatDate, formatPrice } from '../../utils/format';
 import { handleImageError } from '../../utils/image';
@@ -13,12 +14,16 @@ import EmptyState from '../../components/common/EmptyState';
 
 export default function AdminOrderPage() {
   usePageTitle('Quản lý đơn hàng');
+  const { showToast } = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
   const statusParam = searchParams.get('status') || 'all';
 
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  // Đơn hàng đang được cập nhật trạng thái qua API PATCH
+  const [updatingId, setUpdatingId] = useState(null);
 
   // Modal xem chi tiết đơn hàng
   const [selectedOrder, setSelectedOrder] = useState(null);
@@ -60,6 +65,36 @@ export default function AdminOrderPage() {
       next.set('status', selectedKey);
     }
     setSearchParams(next);
+  };
+
+  /**
+   * BR-06: Đổi trạng thái qua PATCH và chỉ cho phép chuyển sang trạng thái kế tiếp hợp lệ.
+   * Đơn 'done' hoặc 'cancelled' không thể đổi được nữa.
+   */
+  const handleStatusChange = async (order, newStatus) => {
+    if (newStatus === order.status) return;
+
+    setUpdatingId(order.id);
+    try {
+      await orderApi.updateStatus(order.id, newStatus);
+      const nextInfo = getOrderStatusInfo(newStatus);
+
+      // Cập nhật state đơn hàng cục bộ
+      setOrders((prev) =>
+        prev.map((o) => (o.id === order.id ? { ...o, status: newStatus } : o))
+      );
+
+      // Cập nhật selectedOrder nếu modal đang mở
+      setSelectedOrder((prev) =>
+        prev && prev.id === order.id ? { ...prev, status: newStatus } : prev
+      );
+
+      showToast(`Đã chuyển đơn #${order.id} sang "${nextInfo.label}"`, 'success');
+    } catch (err) {
+      showToast(getErrorMessage(err), 'danger');
+    } finally {
+      setUpdatingId(null);
+    }
   };
 
   return (
@@ -130,8 +165,10 @@ export default function AdminOrderPage() {
                 <th>Số điện thoại</th>
                 <th>Ngày đặt</th>
                 <th className="text-end">Tổng tiền</th>
-                <th className="text-center">Trạng thái</th>
-                <th className="text-center" style={{ minWidth: 160 }}>
+                <th className="text-center" style={{ minWidth: 190 }}>
+                  Trạng thái (BR-06)
+                </th>
+                <th className="text-center" style={{ minWidth: 120 }}>
                   Thao tác
                 </th>
               </tr>
@@ -139,6 +176,9 @@ export default function AdminOrderPage() {
             <tbody>
               {orders.map((order) => {
                 const statusInfo = getOrderStatusInfo(order.status);
+                const nextStatuses = statusInfo.next || [];
+                const isTerminal = nextStatuses.length === 0; // done hoặc cancelled: không đổi được nữa
+                const isUpdating = updatingId === order.id;
                 const customerName = order.fullName || order.customerName || 'Khách vãng lai';
                 const customerPhone = order.phone || order.customerPhone || 'Chưa có SĐT';
 
@@ -161,9 +201,38 @@ export default function AdminOrderPage() {
                       {formatPrice(order.total)}
                     </td>
                     <td className="text-center">
-                      <Badge bg={statusInfo.variant} className="px-3 py-2 fs-6">
-                        {statusInfo.label}
-                      </Badge>
+                      {isTerminal ? (
+                        /* Đơn done hoặc cancelled không đổi được nữa */
+                        <Badge bg={statusInfo.variant} className="px-3 py-2 fs-6">
+                          {statusInfo.label}
+                        </Badge>
+                      ) : (
+                        /* Form.Select đổi trạng thái chỉ hiện trạng thái kế tiếp hợp lệ (BR-06) */
+                        <div className="d-inline-flex align-items-center gap-1">
+                          <Form.Select
+                            size="sm"
+                            value={order.status}
+                            disabled={isUpdating}
+                            onChange={(e) => handleStatusChange(order, e.target.value)}
+                            style={{ width: 'auto', minWidth: 145 }}
+                            className={`fw-semibold border-${statusInfo.variant}`}
+                            aria-label={`Trạng thái đơn #${order.id}`}
+                          >
+                            <option value={order.status}>
+                              {statusInfo.label}
+                            </option>
+                            {nextStatuses.map((nextSt) => {
+                              const nextInfo = getOrderStatusInfo(nextSt);
+                              return (
+                                <option key={nextSt} value={nextSt}>
+                                  → {nextInfo.label}
+                                </option>
+                              );
+                            })}
+                          </Form.Select>
+                          {isUpdating && <Spinner size="sm" animation="border" />}
+                        </div>
+                      )}
                     </td>
                     <td className="text-center">
                       <Button
