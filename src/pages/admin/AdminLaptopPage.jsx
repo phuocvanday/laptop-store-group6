@@ -107,7 +107,7 @@ export default function AdminLaptopPage() {
     setSavingStock(true);
     try {
       const res = await laptopApi.patch(id, { stock });
-      const updated = res.data;
+      const updated = res.data ?? res;
       setData((prev) => ({
         ...prev,
         data: prev.data.map((i) => (i.id === id ? { ...i, stock: updated.stock } : i)),

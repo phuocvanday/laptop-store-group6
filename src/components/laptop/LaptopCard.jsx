@@ -14,6 +14,7 @@ export default function LaptopCard({ laptop, onAddToCart }) {
 
   const handleAdd = (e) => {
     e.preventDefault();
+    e.stopPropagation();
     if (onAddToCart) {
       onAddToCart(laptop);
     } else {

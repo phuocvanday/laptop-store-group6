@@ -59,7 +59,7 @@ export function CartProvider({ children }) {
         async (laptop, quantity = 1) => {
             if (!user) throw { message: 'Vui lòng đăng nhập' };
 
-            const existing = itemsRef.current.find((item) => item.laptopId === laptop.id);
+            const existing = itemsRef.current.find((item) => Number(item.laptopId) === Number(laptop.id));
             const newQuantity = (existing?.quantity ?? 0) + quantity;
             if (newQuantity > laptop.stock) {
                 throw { message: `"${laptop.name}" chỉ còn ${laptop.stock} sản phẩm` };
@@ -71,7 +71,7 @@ export function CartProvider({ children }) {
                     list.map((item) => (item.id === existing.id ? { ...item, quantity: updated.quantity } : item))
                 );
             } else {
-                const created = await cartApi.add(user.id, laptop.id, quantity);
+                const created = await cartApi.add(user.id, Number(laptop.id), quantity);
                 // Response POST không có _expand → tự gắn laptop vào
                 setItems((list) => [...list, { ...created, laptop }]);
             }
