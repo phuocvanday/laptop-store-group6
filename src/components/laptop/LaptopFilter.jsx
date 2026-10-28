@@ -39,7 +39,7 @@ export default function LaptopFilter({ brands = [], categories = [], filters, on
         checked={!filters.brandId}
         onChange={() => onChange({ brandId: '' })}
       />
-      {brands.map((b) => (
+      {(Array.isArray(brands) ? brands : []).map((b) => (
         <Form.Check
           key={b.id}
           type="radio"
@@ -61,7 +61,7 @@ export default function LaptopFilter({ brands = [], categories = [], filters, on
         checked={!filters.categoryId}
         onChange={() => onChange({ categoryId: '' })}
       />
-      {categories.map((c) => (
+      {(Array.isArray(categories) ? categories : []).map((c) => (
         <Form.Check
           key={c.id}
           type="radio"

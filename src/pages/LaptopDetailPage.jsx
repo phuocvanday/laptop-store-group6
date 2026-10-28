@@ -16,19 +16,18 @@ import {
 import laptopApi from '../api/laptopApi';
 import reviewApi from '../api/reviewApi';
 import { getErrorMessage, isCancel } from '../api/axiosClient';
-import { calculateDiscount, formatDate, formatPrice, getFinalPrice } from '../utils/format';
-import { useToast } from '../contexts/ToastContext';
+import { calculateDiscount, formatPrice, getFinalPrice } from '../utils/format';
 import usePageTitle from '../hooks/usePageTitle';
 import NotFoundPage from './NotFoundPage';
 import LaptopCard from '../components/laptop/LaptopCard';
 import LoadingSpinner from '../components/common/LoadingSpinner';
-import EmptyState from '../components/common/EmptyState';
+import useAddToCart from '../hooks/useAddToCart';
 import ReviewList from '../components/laptop/ReviewList';
 
 export default function LaptopDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { showToast } = useToast();
+  const { add: addToCartAction, adding } = useAddToCart();
 
   const numId = Number(id);
   const isInvalidId = !id || isNaN(numId) || numId <= 0;
@@ -74,11 +73,12 @@ export default function LaptopDetailPage() {
         // ==========================================
         let laptopData;
         try {
-          laptopData = await laptopApi.getById(numId, controller.signal);
+          const res = await laptopApi.getById(numId, controller.signal);
+          laptopData = res?.data ?? res;
         } catch (step1Err) {
           if (isCancel(step1Err) || controller.signal.aborted) return;
           // 404 hoặc không tìm thấy dữ liệu
-          if (step1Err.response?.status === 404) {
+          if (step1Err?.status === 404 || step1Err?.response?.status === 404) {
             setNotFound(true);
             return;
           }
@@ -109,7 +109,8 @@ export default function LaptopDetailPage() {
 
         // Xử lý reviews
         if (reviewsResult.status === 'fulfilled') {
-          setReviews(reviewsResult.value || []);
+          const val = reviewsResult.value;
+          setReviews(Array.isArray(val) ? val : (val?.data ?? []));
         } else {
           // Bỏ qua nếu là cancel error
           if (!isCancel(reviewsResult.reason)) {
@@ -148,7 +149,7 @@ export default function LaptopDetailPage() {
   // Xử lý thêm vào giỏ hàng
   const handleAddToCart = () => {
     if (!laptop || laptop.stock <= 0) return;
-    showToast(`Đã thêm ${quantity} sản phẩm "${laptop.name}" vào giỏ hàng!`, 'success');
+    addToCartAction(laptop, quantity);
   };
 
   // Thêm đánh giá mới trực tiếp vào state mà không cần reload trang (G2, TECH-03)
@@ -317,10 +318,19 @@ export default function LaptopDetailPage() {
                     variant="primary"
                     size="lg"
                     className="fw-bold px-4"
-                    disabled={laptop.stock === 0}
+                    disabled={adding || laptop.stock === 0}
                     onClick={handleAddToCart}
                   >
-                    <i className="bi bi-cart-plus me-2"></i> Thêm vào giỏ hàng
+                    {adding ? (
+                      <>
+                        <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                        Đang thêm...
+                      </>
+                    ) : (
+                      <>
+                        <i className="bi bi-cart-plus me-2"></i> Thêm vào giỏ hàng
+                      </>
+                    )}
                   </Button>
                 </div>
 

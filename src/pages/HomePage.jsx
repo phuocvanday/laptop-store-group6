@@ -48,10 +48,12 @@ export default function HomePage() {
         const durationPar = Math.round(performance.now() - startPar);
         setParallelTime(durationPar);
 
-        setNewArrivals(newRes.data || []);
-        setBestsellers(bestRes.data || []);
-        setBrands(brandsRes || []);
-        setCategories(categoriesRes || []);
+        const rawBrands = brandsRes?.data ?? brandsRes;
+        const rawCategories = categoriesRes?.data ?? categoriesRes;
+        setNewArrivals(newRes?.data || []);
+        setBestsellers(bestRes?.data || []);
+        setBrands(Array.isArray(rawBrands) ? rawBrands : []);
+        setCategories(Array.isArray(rawCategories) ? rawCategories : []);
 
         // 2. Chạy thử nghiệm hàm tuần tự CHỈ KHI Ở MÔI TRƯỜNG DEV (đáp ứng tiêu chí chấm điểm)
         if (import.meta.env.DEV) {
